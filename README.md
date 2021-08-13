@@ -1,2 +1,3 @@
 # SQL-Example
-This repository will show my SQL abilities. 
+This repository will show my SQL abilities. SQL is a true passion of mine. I love writing queries nothing is more fun. 
+
