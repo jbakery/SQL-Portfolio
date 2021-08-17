@@ -1,0 +1,62 @@
+
+Joins and Unions
+
+
+These queries are from a dog hair salon data base. 
+The data base uses mutlipe tables to track pets owner and dates of services. 
+The attempt of this SQL portfolio is to show fluid skills in Joins and Unions.  
+
+
+Question 1, 
+
+In this final challenge, you want to know how many dogs there are of each size, across both lists of owners. 
+So, you'll want to combine the owners and owners_2 tables first, then get a count for each of the three sizes of dogs, small, medium, and large. 
+Then finally, sort the list from smallest to largest. Your final output will show the size and count.
+HINT: Use the alias all_owners to represent the union of both tables. Then, use the alias size_count to capture the count for each of the sizes.
+
+WITH all_owners AS
+(SELECT * FROM owners UNION ALL SELECT * FROM owners_2)
+
+SELECT size, COUNT(size) AS size_count
+FROM all_owners
+GROUP BY size
+ORDER BY size DESC
+
+Question 2,
+
+The town where the dog salon is located had a street fair on June 17 and 18. 
+The business owner wants to know how many transactions took place on those days.
+Write a query that counts the number of transactions on '2019-06-17' and '2019-06-18' from the transactions table.
+
+SELECT COUNT(transaction_id), date
+FROM transactions
+WHERE date = '2019-06-17' OR date = '2019-06-18'
+GROUP BY date
+
+Question 3,
+
+You have a promotion where you'd like to give a gift to those pets who have had their nails done at the salon.
+Write a query that shows the pet_id and service for those pets that used the nails service from transactions. 
+Then sort by those pets first who are receiving a gift.
+HINT: Use a CASEstatement that assigns gift when the service is nails, and otherwise assigns no gift. 
+End your CASE statement with the alias get_gift, and order by this field.
+
+SELECT pet_id, service,
+CASE
+  WHEN service = 'nails' THEN 'gift'
+      ELSE 'no gift'
+  END AS get_gift
+  FROM transactions
+  ORDER BY get_gift;
+
+
+Question 4,
+
+Write a query that returns the owner_id, pet_id, date and service for transactions that happened on June 17th, 
+2019 or for transactions where the service provided was a haircut. Order your results by date.
+
+SELECT owner_id, owners.pet_id, date, service
+FROM transactions LEFT OUTER JOIN owners
+ON owners.pet_id = transactions.pet_id
+WHERE service = 'haircut' OR date = '2019/06/17'
+ORDER BY date

@@ -1,0 +1,41 @@
+
+Aggregating and Grouping Data
+
+These SQL queries are from a real estate data base showing house properities and home sale values.
+The attempt is to show fluid SQL skills. 
+
+Question 1,
+
+Write a query that selects the average lotarea (rounded to 2 decimals) per yearbuilt where the street is not gravel (Grvl) and lotconfig is a corner (Corner). 
+Moreover, select only the average lotareas greater than 1,000, and sort your results by yearbuilt from oldest to newest.
+HINT: Within the first line of your query, use this code so that the proper datatype is used to avoid results displaying in scientific notation:
+
+SELECT yearbuilt, ROUND(AVG(lotarea),2)::float 
+FROM houseprices
+WHERE street NOT IN('Grvl') AND lotconfig = 'Corner'
+GROUP BY yearbuilt
+HAVING AVG(lotarea) > 1000
+ORDER BY yearbuilt
+
+Question 2,
+
+Write a query that shows the average overall quality overallqual (rounded to 0 decimals and renamed as avg_quality) 
+and the number of unique garage types (garagetype) renamed as garage_count for each neighborhood sorted by neighborhood, 
+being careful to not include NULL values.
+HINT: Within the first line of your query, use this code so that the proper datatype is used to avoid results displaying in scientific notation:
+
+SELECT neighborhood, ROUND(AVG(overallqual),0)::integer AS avg_quality, COUNT(DISTINCT(garagetype)) AS garage_count
+FROM houseprices
+GROUP BY neighborhood
+ORDER BY neighborhood;
+
+Question 3,
+
+Write a query that shows, for each yearbuilt, how many houses had a lotarea between 10,000 and 15,000, 
+inclusive. Finally, order it by yearbuilt from oldest to newest.
+
+SELECT COUNT(lotarea), yearbuilt
+FROM houseprices
+WHERE lotarea BETWEEN 10000 AND 15000
+GROUP BY yearbuilt
+ORDER BY yearbuilt
