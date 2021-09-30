@@ -1,21 +1,35 @@
-How to get divorced with SQL.
+Initial Query
 
-CREATE PROCEDURE MyMarriage
-BrideGroom Male (25) ,
-Bride Female(20) AS
-BEGIN
-SELECT Bride FROM Brides
-WHERE FatherInLaw = ‘Millionaire’ AND Count(Car) > 20 AND HouseStatus =’ThreeStoreyed’
-AND BrideEduStatus IN (B.TECH ,BE ,Degree ,MCA ,MiBA) AND Having Brothers= Null AND Sisters =Null
+SELECT FirstName, LastName, Department  
+FROM HumanResources.vEmployeeDepartmentHistory  
+WHERE FirstName = @FirstName AND LastName = @LastName  
+    AND EndDate IS NULL;
+    
 
-SELECT Gold ,Cash,Car,BankBalanceFROM FatherInLaw ;
-UPDATEMyBankAccout SETMyBal = MyBal + FatherInLawBal;
-UPDATEMyLockerSET MyLockerContents = MyLockerContents + FatherInLawGold;
-INSERT INTOMyCarShed VALUES(‘BMW’);
-END
-GO
+Creating Stored Procedure
+   
+    USE AdventureWorks2012;  
+GO  
+CREATE PROCEDURE HumanResources.uspGetEmployeesTest2   
+    @LastName nvarchar(50),   
+    @FirstName nvarchar(50)   
+AS   
 
-The wife writes
+    SET NOCOUNT ON;  
+    SELECT FirstName, LastName, Department  
+    FROM HumanResources.vEmployeeDepartmentHistory  
+    WHERE FirstName = @FirstName AND LastName = @LastName  
+    AND EndDate IS NULL;  
+GO  
 
-DROP HUSBAND;
-Commit;
+Execute Stored Procedured
+
+EXECUTE HumanResources.uspGetEmployeesTest2 N'Ackerman', N'Pilar';  
+-- Or  
+EXEC HumanResources.uspGetEmployeesTest2 @LastName = N'Ackerman', @FirstName = N'Pilar';  
+GO  
+-- Or  
+EXECUTE HumanResources.uspGetEmployeesTest2 @FirstName = N'Pilar', @LastName = N'Ackerman';  
+GO  
+
+Stored procedures can be scheduled as jobs in the SQL server to generate automatice reports. 
