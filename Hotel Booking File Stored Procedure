@@ -1,0 +1,339 @@
+Skip to content
+Search or jump to…
+Pull requests
+Issues
+Marketplace
+Explore
+ 
+@jbakery 
+jbakery
+/
+SQL-Example
+Public
+1
+10
+Code
+Issues
+Pull requests
+Actions
+Projects
+Wiki
+Security
+Insights
+Settings
+SQL-Example/HOTEL BOOKING DATA FROM LMS
+@jbakery
+jbakery Update HOTEL BOOKING DATA FROM LMS
+Latest commit b8a630f 2 days ago
+ History
+ 1 contributor
+295 lines (242 sloc)  5.14 KB
+   
+USE [BI]
+GO
+
+/****** Object:  StoredProcedure [dbo].[spRM_PremOTB]    Script Date: 11/9/2021 9:45:56 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+CREATE PROCEDURE [dbo].[spRM_PremOTB] 
+WITH RECOMPILE 	 
+AS
+
+/*
+-----------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
+Date Created: 11/09/2021
+Date Updated: 
+Created by: Jaime Baker
+
+Description:
+Outputs Prem_OTB file
+
+Code Sections:
+(1) Pull reservations
+(2) Filter GIP
+(3) Truncate table
+(4) Build data set
+
+
+
+------------------------------------------------------------------------------------------------------
+Maintenance History
+------------------------------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
+*/
+
+BEGIN
+
+SET NOCOUNT ON
+
+DECLARE @runtime AS DATETIME
+
+SET @runtime = GETDATE()
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
+-- (1) Pull LMS data 
+
+DROP TABLE IF EXISTS #temp_gip
+
+SELECT 
+	KYDTGI
+	,SEQGI
+	,CONVGI
+	,ACTPGI
+	,RMNOGI
+	,SEQSGI
+	,WINGGI
+	,RSTAGI
+	,FNAMGI
+	,LNAMGI
+	,SIDGI
+	,RTEPGI
+
+INTO #temp_gip
+FROM [DW_LMS_01_VW].[dbo].[GIP] (nolock)
+
+DROP TABLE IF EXISTS #temp_rlp
+
+SELECT
+	KYDTRL
+	,SEQRL
+	,EFDTRL
+	,RETNRL
+	,BPRCRL
+
+INTO #temp_rlp	
+FROM [DW_LMS_01_VW].[dbo].[RLP] (nolock)
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
+-- (2) Filter GIP
+
+DROP TABLE IF EXISTS #temp_filter
+
+SELECT
+	KYDTGI
+	,SEQGI
+	,CONVGI
+	,ACTPGI
+	,RMNOGI
+	,SEQSGI
+	,WINGGI
+	,RSTAGI
+	,FNAMGI
+	,LNAMGI
+	,SIDGI
+	,RTEPGI
+
+INTO #temp_filter
+FROM #temp_gip
+WHERE RSTAGI NOT IN ('X', 'O')
+	AND SEQSGI < 2
+	AND LEFT(ACTPGI, 2) IN (
+		'P2'
+		,'ZQ'
+		,'ZK'
+		,'LK'
+		,'S2'
+		,'B1'
+		,'B2'
+		,'ZW'
+		,'WV'
+		,'WN'
+		,'P3'
+		,'1P'
+		,'2P'
+		,'P4'
+		,'3P'
+		,'4P'
+		)
+	AND LEN(LTRIM(RTRIM(CONVGI))) > 1
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
+-- (2) Truncate table
+
+BEGIN TRANSACTION
+
+BEGIN TRY 
+
+TRUNCATE TABLE [dbo].[PREM_OTB]
+;
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
+-- (3) Build data set
+
+WITH RLP_cte (
+	KYDTRL
+	,SEQRL
+	,EFDTRL
+	,RETNRL
+	,BPRCRL
+	) AS (
+	SELECT DISTINCT
+		rlp2.KYDTRL
+		,rlp2.SEQRL
+		,rlp2.EFDTRL
+		,rlp2.RETNRL
+		,rlp2.BPRCRL
+	
+	FROM #temp_rlp AS rlp2
+		JOIN #temp_filter AS gip2
+			ON rlp2.KYDTRL = gip2.KYDTGI
+				AND rlp2.SEQRL = gip2.SEQGI
+	WHERE rlp2.RETNRL = 1
+		AND (rlp2.EFDTRL + 1) >= 41153
+	)
+
+INSERT INTO [dbo].[PREM_OTB] (
+	KYDTRL
+	,SEQRL
+	,EFDTRL
+	,CONVGI
+	,Eff_Dt
+	,ACTPGI
+	,RMNOGI
+	,SEQSGI
+	,WINGGI
+	,RSTAGI
+	,KYDTGI
+	,SEQGI
+	,FNAMGI
+	,LNAMGI
+	,SIDGI
+	,RmtypeWing
+	,Segment
+	,SUM_of_BPRCRL
+	,WV2
+	,InsertDttm
+	)
+
+SELECT
+	rlp.KYDTRL
+	,rlp.SEQRL
+	,rlp.EFDTRL
+	,gip.CONVGI
+	,(rlp.EFDTRL + 1) AS Eff_Dt
+	,gip.ACTPGI
+	,gip.RMNOGI
+	,gip.SEQSGI
+	,gip.WINGGI
+	,gip.RSTAGI
+	,gip.KYDTGI
+	,gip.SEQGI
+	,gip.FNAMGI
+	,gip.LNAMGI
+	,gip.SIDGI
+	,(LEFT(gip.ACTPGI, 2) + gip.WINGGI) AS RmtypeWing
+	,CASE
+		WHEN LEFT(gip.CONVGI, 1) IN ('C', 'D') THEN 'Casino'
+		WHEN LEFT(gip.CONVGI, 1) = 'S' THEN 'Group'
+		ELSE 'Transient'
+		END AS Segment
+	,SUM(rlp.BPRCRL) AS SUM_of_BPRCRL
+	,CASE
+		WHEN gip.RTEPGI = 'FHESWC' THEN 'WV2'
+		ELSE ''
+		END AS WV2
+	,@runtime AS InsertDttm
+
+FROM #temp_gip AS gip
+	JOIN RLP_cte AS rlp (nolock)
+		ON gip.KYDTGI = rlp.KYDTRL
+			AND gip.SEQGI = rlp.SEQRL
+WHERE gip.RSTAGI NOT IN ('X', 'O')
+	AND gip.SEQSGI < 2
+	AND LEFT(gip.ACTPGI, 2) IN (
+		'P2'
+		,'ZQ'
+		,'ZK'
+		,'LK'
+		,'S2'
+		,'B1'
+		,'B2'
+		,'ZW'
+		,'WV'
+		,'WN'
+		,'P3'
+		,'1P'
+		,'2P'
+		,'P4'
+		,'3P'
+		,'4P'
+		)
+	AND LEN(LTRIM(RTRIM(gip.CONVGI))) > 1
+GROUP BY 
+	rlp.KYDTRL
+	,rlp.SEQRL
+	,rlp.EFDTRL
+	,gip.CONVGI
+	,(rlp.EFDTRL + 1)
+	,gip.ACTPGI
+	,gip.RMNOGI
+	,gip.SEQSGI
+	,gip.WINGGI
+	,gip.RSTAGI
+	,gip.KYDTGI
+	,gip.SEQGI
+	,gip.FNAMGI
+	,gip.LNAMGI
+	,gip.SIDGI
+	,(LEFT(gip.ACTPGI, 2) + gip.WINGGI)
+	,CASE
+		WHEN LEFT(gip.CONVGI, 1) IN ('C', 'D') THEN 'Casino'
+		WHEN LEFT(gip.CONVGI, 1) = 'S' THEN 'Group'
+		ELSE 'Transient'
+		END
+	,CASE
+		WHEN gip.RTEPGI = 'FHESWC' THEN 'WV2'
+		ELSE ''
+		END
+
+
+END TRY
+
+BEGIN CATCH
+
+PRINT ERROR_MESSAGE() + 'ERROR #' + CAST(ERROR_NUMBER() AS VARCHAR)
+
+IF @@TRANCOUNT > 0
+
+ROLLBACK TRANSACTION
+
+END CATCH
+
+IF @@TRANCOUNT > 0
+
+COMMIT TRANSACTION
+
+
+END
+GO
+
+
+© 2021 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
+Loading complete
