@@ -87,7 +87,7 @@ SELECT  *
   Where dea.continent is not null
   Order By 2,3;
 
-  --USE CTE
+  -- Using CTE to perform Calculation on Partition By in previous query
 
   With PopvsVac (Continent, Location, Date, Population, new_vaccinations, Rolling_People_Vacinated)
   as 
@@ -105,7 +105,7 @@ SELECT *, (Rolling_People_Vacinated/Population)*100 as [Total_Percantage_Vacinat
 FROM PopvsVac
 
 
--- Temp Table
+-- Using Temp Table to perform Calculation on Partition By in previous query
 
 Drop Table if exists #Percent_Population_Vacinated
 Create Table #Percent_Population_Vacinated
